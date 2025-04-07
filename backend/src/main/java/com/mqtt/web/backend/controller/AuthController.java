@@ -7,7 +7,7 @@ import com.mqtt.web.backend.model.User;
 import com.mqtt.web.backend.repository.UserRepository;
 import com.mqtt.web.backend.security.JwtUtil;
 import com.mqtt.web.backend.service.CustomUserDetailsService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -46,12 +46,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest req) {
+    public ResponseEntity<String> login(@RequestBody AuthRequest req) {
         authManager.authenticate(new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword()));
         final UserDetails userDetails = userDetailsService.loadUserByUsername(req.getUsername());
         final String jwt = jwtUtil.generateToken(userDetails);
-        //TO DO
-        return ResponseEntity.ok(new AuthResponse(jwt));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + jwt);
+
+        return ResponseEntity.ok().headers(headers).body("User logged in");
     }
 }
-

@@ -1,5 +1,6 @@
 package com.mqtt.web.backend.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -31,6 +32,14 @@ public class JwtUtil {
 
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername());
+        return username.equals(userDetails.getUsername())  && !isTokenExpired(token);
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractClaims(token).getExpiration().before(new Date());
+    }
+
+    private Claims extractClaims(String token) {
+        return Jwts.parser().setSigningKey(key).parseClaimsJws(token).getBody();
     }
 }
