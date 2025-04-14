@@ -8,21 +8,18 @@ import '../styles/forms.css';
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (formData) => {
     setIsLoading(true);
     setError('');
-    setSuccessMessage('');
 
     try {
       await login(formData.email, formData.password);
-      setSuccessMessage('Login successful!');
       navigate('/dashboard');
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -38,7 +35,6 @@ const Login = () => {
           onSubmit={handleSubmit}
           isLoading={isLoading}
           error={error}
-          successMessage={successMessage}
         />
       </Paper>
     </div>

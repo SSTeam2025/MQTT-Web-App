@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    isAuthenticated: authService.isAuthenticated(),
+    isAuthenticated: authService.isAuthenticated,
     getUserRole: authService.getUserRole
   };
 

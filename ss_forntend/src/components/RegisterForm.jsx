@@ -10,7 +10,11 @@ import {
   List,
   ListItem,
   ListItemText,
-  CircularProgress
+  CircularProgress,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import { validateEmail, validatePassword } from '../utils/validators';
 import '../styles/forms.css';
@@ -20,15 +24,23 @@ const RegisterForm = ({ onSubmit, isLoading, error, successMessage }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    name: ''
+    name: '',
+    role: ''
   });
   const [validationErrors, setValidationErrors] = useState({
     email: '',
     password: [],
     confirmPassword: '',
-    name: ''
+    name: '',
+    role: ''
   });
   const [showValidation, setShowValidation] = useState(false);
+
+  const roles = [
+    { value: 'ADMIN', label: 'Admin' },
+    { value: 'OPERATOR', label: 'Operator' },
+    { value: 'VIZUALIZATOR', label: 'Visualizer' }
+  ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,7 +55,8 @@ const RegisterForm = ({ onSubmit, isLoading, error, successMessage }) => {
       email: '',
       password: [],
       confirmPassword: '',
-      name: ''
+      name: '',
+      role: ''
     };
 
     // Validate name
@@ -77,6 +90,11 @@ const RegisterForm = ({ onSubmit, isLoading, error, successMessage }) => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    // Validate role
+    if (!formData.role) {
+      newErrors.role = 'Please select a role';
+    }
+
     setValidationErrors(newErrors);
     setShowValidation(true);
     
@@ -98,103 +116,110 @@ const RegisterForm = ({ onSubmit, isLoading, error, successMessage }) => {
   return (
     <Box component="form" onSubmit={handleSubmit} className="form">
       {successMessage && (
-        <Alert severity="success" className="alert">
+        <Alert severity="success" sx={{ mb: 2 }}>
           {successMessage}
         </Alert>
       )}
       {error && (
-        <Alert severity="error" className="alert">
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
-      <TextField
-        className="form-field"
-        required
-        fullWidth
-        id="name"
-        label="Full Name"
-        name="name"
-        autoComplete="name"
-        autoFocus
-        value={formData.name}
-        onChange={handleChange}
-        error={showValidation && !!validationErrors.name}
-        helperText={showValidation ? validationErrors.name : ''}
-        disabled={isLoading}
-      />
-      <TextField
-        className="form-field"
-        required
-        fullWidth
-        id="email"
-        label="Email Address"
-        name="email"
-        autoComplete="email"
-        value={formData.email}
-        onChange={handleChange}
-        error={showValidation && !!validationErrors.email}
-        helperText={showValidation ? validationErrors.email : ''}
-        disabled={isLoading}
-      />
-      <TextField
-        className="form-field"
-        required
-        fullWidth
-        name="password"
-        label="Password"
-        type="password"
-        id="password"
-        autoComplete="new-password"
-        value={formData.password}
-        onChange={handleChange}
-        error={hasPasswordError}
-        helperText={hasPasswordError ? 'Password requirements not met:' : ''}
-        disabled={isLoading}
-      />
-      {hasPasswordError && (
-        <List dense className="error-list password-errors">
-          {validationErrors.password.map((message, index) => (
-            <ListItem key={index} className="error-item">
-              <ListItemText 
-                primary={message} 
-                className="error-text"
-              />
-            </ListItem>
-          ))}
-        </List>
-      )}
-      <TextField
-        className="form-field"
-        required
-        fullWidth
-        name="confirmPassword"
-        label="Confirm Password"
-        type="password"
-        id="confirmPassword"
-        value={formData.confirmPassword}
-        onChange={handleChange}
-        error={hasPasswordError || (showValidation && !!validationErrors.confirmPassword)}
-        helperText={showValidation ? validationErrors.confirmPassword : ''}
-        disabled={isLoading}
-      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          fullWidth
+          label="Name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          error={showValidation && !!validationErrors.name}
+          helperText={showValidation && validationErrors.name}
+        />
+        <TextField
+          fullWidth
+          label="Email"
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          error={showValidation && !!validationErrors.email}
+          helperText={showValidation && validationErrors.email}
+        />
+        <FormControl 
+          fullWidth 
+          error={showValidation && !!validationErrors.role}
+          sx={{ 
+            '& .MuiSelect-select': {
+              height: '56px',
+              display: 'flex',
+              alignItems: 'center'
+            }
+          }}
+        >
+          <InputLabel>Select Your Role</InputLabel>
+          <Select
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            label="Select Your Role"
+          >
+            {roles.map((role) => (
+              <MenuItem key={role.value} value={role.value}>
+                {role.label}
+              </MenuItem>
+            ))}
+          </Select>
+          {showValidation && validationErrors.role && (
+            <Typography color="error" variant="caption">
+              {validationErrors.role}
+            </Typography>
+          )}
+        </FormControl>
+        <TextField
+          fullWidth
+          label="Password"
+          name="password"
+          type="password"
+          value={formData.password}
+          onChange={handleChange}
+          error={hasPasswordError}
+        />
+        <TextField
+          fullWidth
+          label="Confirm Password"
+          name="confirmPassword"
+          type="password"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          error={showValidation && !!validationErrors.confirmPassword}
+          helperText={showValidation && validationErrors.confirmPassword}
+        />
+        {hasPasswordError && (
+          <List dense>
+            {validationErrors.password.map((error, index) => (
+              <ListItem key={index}>
+                <ListItemText
+                  primary={error}
+                  primaryTypographyProps={{ color: 'error' }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
       <Button
         type="submit"
         fullWidth
         variant="contained"
-        className="form-button"
+        color="primary"
         disabled={isLoading}
+        sx={{ mt: 3 }}
       >
         {isLoading ? <CircularProgress size={24} /> : 'Register'}
       </Button>
-      <Grid container justifyContent="flex-end">
-        <Grid item>
-          <Link to="/login" className="form-link">
-            <Typography variant="body2" color="primary">
-              Already have an account? Sign in
-            </Typography>
-          </Link>
-        </Grid>
-      </Grid>
+      <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+        Already have an account? <Link to="/login">Log in</Link>
+      </Typography>
     </Box>
   );
 };

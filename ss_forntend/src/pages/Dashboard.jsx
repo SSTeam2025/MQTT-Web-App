@@ -31,9 +31,8 @@ const Dashboard = () => {
               User Information
             </Typography>
             <Box sx={{ mt: 2 }}>
-              <Typography><strong>Email:</strong> {user?.email}</Typography>
-              <Typography><strong>Role:</strong> {user?.role}</Typography>
-              <Typography><strong>User ID:</strong> {user?.id}</Typography>
+              <Typography><strong>Email:</strong> {user?.user?.email}</Typography>
+              <Typography><strong>Role:</strong> {user?.user?.role}</Typography>
             </Box>
           </Paper>
         </Grid>
