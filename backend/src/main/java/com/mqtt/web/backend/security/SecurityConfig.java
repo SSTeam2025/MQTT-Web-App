@@ -1,7 +1,5 @@
 package com.mqtt.web.backend.security;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,6 +29,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()  // ✅ allow access to register/login
+                        .requestMatchers("/images/**").permitAll() // ← ✅ permite accesul public
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess
