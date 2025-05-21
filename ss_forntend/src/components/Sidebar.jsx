@@ -2,6 +2,7 @@ import React from 'react';
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar } from '@mui/material';
 import DevicesIcon from '@mui/icons-material/Devices';
 import HomeIcon from '@mui/icons-material/Home';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import { NavLink } from 'react-router-dom';
 
 const drawerWidth = 220;
@@ -73,6 +74,35 @@ const Sidebar = ({ location, handleSidebarClick }) => (
         </ListItemIcon>
         <ListItemText
           primary="Devices"
+          primaryTypographyProps={{ color: 'text.secondary' }}
+        />
+      </ListItem>
+      <ListItem
+        button
+        key="Gallery"
+        component={NavLink}
+        to="/dashboard/gallery"
+        onClick={() => handleSidebarClick('/dashboard/gallery')}
+        sx={{
+          '&.Mui-selected, &.Mui-selected:hover, &.active': {
+            backgroundColor: '#e3f2fd',
+            borderLeft: '4px solid #1976d2',
+            color: (theme) => theme.palette.primary.main,
+            '& .MuiListItemText-primary': {
+              color: (theme) => theme.palette.primary.main,
+              fontWeight: 600,
+            },
+            '& .MuiListItemIcon-root': {
+              color: (theme) => theme.palette.primary.main,
+            }
+          }
+        }}
+      >
+        <ListItemIcon>
+          <PhotoLibraryIcon sx={{ color: 'text.secondary' }} />
+        </ListItemIcon>
+        <ListItemText
+          primary="Gallery"
           primaryTypographyProps={{ color: 'text.secondary' }}
         />
       </ListItem>

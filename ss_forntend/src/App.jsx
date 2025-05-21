@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Devices from './pages/Devices';
 import AdminDashboard from './pages/AdminDashboard';
 import Unauthorized from './pages/Unauthorized';
+import Gallery from './pages/Gallery';
 import { Typography } from '@mui/material';
 import './App.css';
 
@@ -26,7 +27,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            {/* <Route
+            <Route
               index
               element={
                 <>
@@ -38,8 +39,9 @@ function App() {
                   </Typography>
                 </>
               }
-            /> */}
+            />
             <Route path="devices" element={<Devices />} />
+            <Route path="gallery" element={<Gallery />} />
           </Route>
           <Route
             path="/admin"
