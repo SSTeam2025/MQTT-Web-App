@@ -1,65 +1,74 @@
-import { Box, Container, Typography, Paper, Button, Grid } from '@mui/material';
+import React from 'react';
+import { AppBar, Toolbar, Typography, Box, Grid } from '@mui/material';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Sidebar from '../components/Sidebar';
+import LastUsedDevice from '../components/LastUsedDevice';
+import TotalImagesTodayWidget from '../components/TotalImagesTodayWidget';
+import DeviceStatusWidget from '../components/DeviceStatusWidget';
+import LatestImagesGrid from '../components/LatestImagesGrid';
+import ActiveDevicesList from '../components/ActiveDevicesList';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h4" component="h1">
-              Dashboard
-            </Typography>
-            <Button variant="contained" color="error" onClick={handleLogout}>
-              Logout
-            </Button>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              User Information
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              <Typography><strong>Email:</strong> {user?.user?.email}</Typography>
-              <Typography><strong>Role:</strong> {user?.user?.role}</Typography>
-            </Box>
-          </Paper>
-        </Grid>
+  const handleSidebarClick = (path) => {
+    console.log('Sidebar clicked, navigating to:', path);
+  };
 
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Quick Actions
+  return (
+    <Box sx={{ display: 'flex', height: '100vh' }}>
+      {/* Navbar */}
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <Toolbar>
+          <Typography variant="h6" noWrap component="div">
+            CamViewer
+          </Typography>
+        </Toolbar>
+      </AppBar>
+
+      {/* Sidebar */}
+      <Sidebar location={location} handleSidebarClick={handleSidebarClick} />
+
+      {/* Main Content */}
+      <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
+        <Toolbar />
+        {location.pathname === '/dashboard' && (
+          <>
+            <Typography variant="h4" gutterBottom>
+              Welcome to the Dashboard
             </Typography>
-            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-              <Button variant="contained" color="primary">
-                View Profile
-              </Button>
-              {user?.role === 'admin' && (
-                <Button 
-                  variant="contained" 
-                  color="secondary"
-                  onClick={() => navigate('/admin')}
-                >
-                  Admin Panel
-                </Button>
-              )}
+            <Typography>
+              Select an item from the sidebar to manage your devices or view other sections
+            </Typography>
+            <Grid container spacing={2} sx={{ mt: 4 }}>
+              <Grid item xs={12} md={4} lg={3}>
+                <TotalImagesTodayWidget />
+              </Grid>
+              <Grid item xs={12} md={4} lg={3}>
+                <DeviceStatusWidget />
+              </Grid>
+            </Grid>
+            <Box sx={{ mt: 2 }}>
+              <LastUsedDevice />
             </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Container>
+            <LatestImagesGrid title="Latest Images" />
+            <Box sx={{ pb: 6 }}>
+              <ActiveDevicesList title="Active Devices" />
+            </Box>
+          </>
+        )}
+        <Outlet />
+      </Box>
+    </Box>
   );
 };
 

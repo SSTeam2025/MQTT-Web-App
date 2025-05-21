@@ -4,8 +4,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
+import Devices from './pages/Devices';
 import AdminDashboard from './pages/AdminDashboard';
 import Unauthorized from './pages/Unauthorized';
+import { Typography } from '@mui/material';
 import './App.css';
 
 function App() {
@@ -23,7 +25,22 @@ function App() {
                 <Dashboard />
               </ProtectedRoute>
             }
-          />
+          >
+            {/* <Route
+              index
+              element={
+                <>
+                  <Typography variant="h4" gutterBottom>
+                    Welcome to the Dashboard
+                  </Typography>
+                  <Typography>
+                    Select an item from the sidebar to manage your devices or view other sections.
+                  </Typography>
+                </>
+              }
+            /> */}
+            <Route path="devices" element={<Devices />} />
+          </Route>
           <Route
             path="/admin"
             element={
