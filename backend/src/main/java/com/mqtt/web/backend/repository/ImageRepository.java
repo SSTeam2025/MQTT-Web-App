@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ImageRepository extends JpaRepository<ImageEntity, Long> {
@@ -14,4 +15,6 @@ public interface ImageRepository extends JpaRepository<ImageEntity, Long> {
     List<ImageEntity> findByUploadDateBetween(LocalDateTime start, LocalDateTime end);
 
     List<ImageEntity> findByDeviceIdAndUploadDateBetween(String deviceId, LocalDateTime start, LocalDateTime end);
+    Optional<ImageEntity> findByFilename(String filename);
+
 }

@@ -2,8 +2,12 @@ package com.mqtt.web.backend.controller;
 
 import com.mqtt.web.backend.dtos.ImageDTO;
 import com.mqtt.web.backend.dtos.ImageUploadRequest;
+import com.mqtt.web.backend.dtos.SimpleFilterRequest;
 import com.mqtt.web.backend.model.ImageEntity;
 import com.mqtt.web.backend.repository.ImageRepository;
+import com.mqtt.web.backend.service.Analysis;
+import com.mqtt.web.backend.service.Filters;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,14 +18,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/images")
@@ -40,19 +45,30 @@ public class ImageController {
         try {
             // Decodează Base64
             byte[] imageBytes = Base64.getDecoder().decode(request.getImageData());
-
-            // Generează nume unic (sau folosește ce primești)
-            String filename = UUID.randomUUID() + "_" + request.getFilename();
             String extension = getExtensionFromFormat(request.getFormat());
 
+            // Citește imaginea într-un BufferedImage
+            BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (originalImage == null) {
+                return ResponseEntity.badRequest().body("Fișierul nu este o imagine validă.");
+            }
+
+            // Redimensionare automată: max 1024x1024 păstrând proporțiile
+            BufferedImage resizedImage = Thumbnails.of(originalImage)
+                    .size(1024, 1024)
+                    .outputQuality(0.85) // opțional, pentru JPEG
+                    .asBufferedImage();
+
+            // Generează nume unic
+            String filename = UUID.randomUUID() + "_" + request.getFilename();
             if (!filename.endsWith(extension)) {
                 filename += extension;
             }
 
-            // Salvează local în uploads/
+            // Salvează imaginea redimensionată în uploads/
             Files.createDirectories(uploadDir);
             Path filePath = uploadDir.resolve(filename);
-            Files.write(filePath, imageBytes);
+            ImageIO.write(resizedImage, extension.replace(".", ""), filePath.toFile());
 
             // Salvează metadatele în DB
             ImageEntity entity = new ImageEntity();
@@ -63,9 +79,10 @@ public class ImageController {
 
             imageRepository.save(entity);
 
-            return ResponseEntity.ok("Imagine salvată cu succes: " + filename);
+            return ResponseEntity.ok("Imagine salvată și redimensionată cu succes: " + filename);
+
         } catch (IOException | IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Eroare la salvare: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Eroare la salvare/redimensionare: " + e.getMessage());
         }
     }
 
@@ -157,6 +174,97 @@ public class ImageController {
                 image.getUploadDate(),
                 url
         );
+    }
+
+    @PostMapping("/apply-filters")
+    public ResponseEntity<Map<String, String>> applySimpleFilters(@RequestBody SimpleFilterRequest request) {
+        try {
+            Path inputPath = uploadDir.resolve(request.getFilename()).normalize();
+            if (!Files.exists(inputPath)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Imaginea originală nu există."));
+            }
+
+            BufferedImage image = ImageIO.read(inputPath.toFile());
+            if (image == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Fișierul nu e imagine validă."));
+            }
+
+            // Aplică filtrele dacă sunt setate
+            if (request.getGrayscale() != 0) {
+                image = Filters.applyGrayscalePercentage(image, request.getGrayscale());
+            }
+            if (request.getContrast() != 0) {
+                image = Filters.applyContrast(image, request.getContrast());
+            }
+            if (request.getBrightness() != 0) {
+                image = Filters.applyBrightness(image, request.getBrightness());
+            }
+
+            String extension = getExtensionFromFilename(request.getFilename());
+            String newFilename = "filtered_" + UUID.randomUUID() + extension;
+            Path outputPath = uploadDir.resolve(newFilename);
+            ImageIO.write(image, extension.replace(".", ""), outputPath.toFile());
+
+            // Salvează metadatele
+            ImageEntity entity = new ImageEntity();
+            entity.setFilename(newFilename);
+            entity.setFormat("image/" + extension.replace(".", ""));
+            entity.setDeviceId("processed");
+            entity.setUploadDate(LocalDateTime.now());
+            imageRepository.save(entity);
+
+            String url = ServletUriComponentsBuilder
+                    .fromCurrentContextPath()
+                    .path("/images/")
+                    .path(newFilename)
+                    .toUriString();
+
+            return ResponseEntity.ok(Map.of("url", url, "filename", newFilename));
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Eroare la procesare: " + e.getMessage()));
+        }
+    }
+
+    private String getExtensionFromFilename(String filename) {
+        int dotIndex = filename.lastIndexOf(".");
+        return (dotIndex != -1) ? filename.substring(dotIndex) : ".jpg";
+    }
+
+    @GetMapping("/analyze")
+    public ResponseEntity<Map<String, Object>> analyzeImage(@RequestParam String filename) throws IOException {
+        Path filePath = uploadDir.resolve(filename).normalize();
+        BufferedImage img = ImageIO.read(filePath.toFile());
+
+        Map<String, int[]> histogram = Analysis.computeHistogram(img);
+        BufferedImage edgeImage = Analysis.detectEdges(img);
+
+        Optional<ImageEntity> original = imageRepository.findByFilename(filename);
+        String originalDeviceId = original.map(ImageEntity::getDeviceId).orElse("unknown");
+
+        // Salvează imaginea cu muchii
+        String edgeFilename = "edges_" + filename;
+        ImageIO.write(edgeImage, "jpg", uploadDir.resolve(edgeFilename).toFile());
+
+        // Salvează metadatele pentru imaginea de muchii
+        ImageEntity edgeEntity = new ImageEntity();
+        edgeEntity.setFilename(edgeFilename);
+        edgeEntity.setDeviceId(originalDeviceId);
+        edgeEntity.setFormat("image/jpeg");
+        edgeEntity.setUploadDate(LocalDateTime.now());
+        imageRepository.save(edgeEntity);
+
+        String edgeUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/images/")
+                .path(edgeFilename)
+                .toUriString();
+
+        return ResponseEntity.ok(Map.of(
+                "histogram", histogram,
+                "edgesUrl", edgeUrl
+        ));
     }
 
 
