@@ -23,6 +23,6 @@ export const galleryFilters = [
 ];
 
 export const gallerySortOptions = [
-  { value: 'latest', label: 'Latest' },
+  { value: 'newest', label: 'Newest' },
   { value: 'oldest', label: 'Oldest' }
 ]; 

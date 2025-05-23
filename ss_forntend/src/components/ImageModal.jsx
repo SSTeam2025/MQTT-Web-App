@@ -8,7 +8,10 @@ import {
   Box,
   Button,
   Slider,
-  Stack
+  Stack,
+  Tabs,
+  Tab,
+  CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import RotateLeftIcon from '@mui/icons-material/RotateLeft';
@@ -19,8 +22,9 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ContrastIcon from '@mui/icons-material/Contrast';
 import BrightnessIcon from '@mui/icons-material/Brightness6';
 import FilterBAndWIcon from '@mui/icons-material/FilterBAndW';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 
-const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
+function ImageModal({ open, onClose, image, onImageProcessed }) {
   const [rotation, setRotation] = useState(0);
   const [scale, setScale] = useState(1);
   const [contrast, setContrast] = useState(0);
@@ -30,6 +34,9 @@ const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0 });
   const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });
+  const [activeTab, setActiveTab] = useState(0);
+  const [edgeDetectionUrl, setEdgeDetectionUrl] = useState(null);
+  const [histogram, setHistogram] = useState(null);
   const imageRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -42,8 +49,53 @@ const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
       setBrightness(0);
       setGrayscale(0);
       setImageLoaded(false);
+      setEdgeDetectionUrl(null);
+      setHistogram(null);
+    } else if (open && image) {
+      setActiveTab(0); // Set default tab to Filters
+      
+      // Load edge detection preview
+      fetch(`http://localhost:8081/images/analyze/preview?filename=${image.id}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'image/jpeg'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to get edge detection preview');
+        }
+        return response.blob();
+      })
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        setEdgeDetectionUrl(url);
+      })
+      .catch(error => {
+        console.error('Error getting edge detection preview:', error);
+      });
+
+      // Load histogram data
+      fetch(`http://localhost:8081/images/analyze/histogram?filename=${image.id}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to get histogram data');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setHistogram(data);
+      })
+      .catch(error => {
+        console.error('Error getting histogram data:', error);
+      });
     }
-  }, [open]);
+  }, [open, image]);
 
   const handleRotateLeft = () => {
     setRotation((prev) => (prev - 90) % 360);
@@ -167,6 +219,56 @@ const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
     }
   };
 
+  const handleEdgeDetectionDownload = async () => {
+    try {
+      const response = await fetch(`http://localhost:8081/images/analyze?filename=${image.id}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download edge detection');
+      }
+
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      // Fetch the image using the edgesUrl from the response
+      const imageResponse = await fetch(data.edgesUrl);
+      if (!imageResponse.ok) {
+        throw new Error('Failed to fetch processed image');
+      }
+
+      const blob = await imageResponse.blob();
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `edge_${image.id}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // Notify parent component that a new image was processed
+      if (onImageProcessed) {
+        onImageProcessed({
+          filename: `edge_${image.id}`,
+          url: data.edgesUrl,
+          deviceId: 'website',
+          deviceName: 'Website',
+          timestamp: new Date().toISOString(),
+          histogram: data.histogram
+        });
+      }
+    } catch (error) {
+      console.error('Error downloading edge detection:', error);
+    }
+  };
+
   const getImageStyle = () => {
     // Convert contrast to match backend's factor calculation
     const contrastFactor = Math.pow((100 + contrast) / 100, 2);
@@ -187,6 +289,49 @@ const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
       position: 'relative',
       filter: `contrast(${contrastValue}%) brightness(${brightnessValue}%) grayscale(${grayscaleValue}%)`
     };
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const renderImagePreview = () => {
+    if (activeTab === 0) {
+      return (
+        <img
+          ref={imageRef}
+          id="modal-image"
+          src={image?.url}
+          alt={image?.deviceName}
+          style={getImageStyle()}
+          onLoad={() => setImageLoaded(true)}
+        />
+      );
+    } else {
+      return (
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>Edge Detection Preview</Typography>
+          {edgeDetectionUrl ? (
+            <>
+              <img
+                src={edgeDetectionUrl}
+                alt="Edge Detection"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '70vh',
+                  transform: `rotate(${rotation}deg) scale(${scale})`,
+                  transition: 'transform 0.3s ease-in-out',
+                  opacity: imageLoaded ? 1 : 0,
+                  position: 'relative'
+                }}
+              />
+            </>
+          ) : (
+            <CircularProgress />
+          )}
+        </Box>
+      );
+    }
   };
 
   return (
@@ -210,6 +355,11 @@ const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
       </DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Tabs value={activeTab} onChange={handleTabChange} centered>
+            <Tab label="Filters" />
+            <Tab label="Edge Detection" />
+          </Tabs>
+
           <Box
             ref={containerRef}
             sx={{
@@ -224,14 +374,7 @@ const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
             }}
             onMouseDown={handleMouseDown}
           >
-            <img
-              ref={imageRef}
-              id="modal-image"
-              src={image?.url}
-              alt={image?.deviceName}
-              style={getImageStyle()}
-              onLoad={() => setImageLoaded(true)}
-            />
+            {renderImagePreview()}
             <Box
               className="resize-handle"
               sx={{
@@ -285,70 +428,83 @@ const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
                 <ZoomInIcon />
               </Stack>
             </Box>
+            {activeTab === 1 && edgeDetectionUrl && (
+              <Button
+                variant="contained"
+                startIcon={<DownloadIcon />}
+                onClick={handleEdgeDetectionDownload}
+              >
+                Download Edge Detection
+              </Button>
+            )}
           </Stack>
 
-          {/* Image Effects Controls */}
-          <Box sx={{ px: 2, py: 1 }}>
-            <Stack spacing={2}>
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <ContrastIcon sx={{ width: 24, height: 24 }} />
-                  <Typography variant="body2" sx={{ width: 80 }}>Contrast</Typography>
-                  <Slider
-                    value={contrast}
-                    onChange={handleContrastChange}
-                    min={-100}
-                    max={100}
-                    sx={{ width: '200px' }}
-                  />
-                  <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{contrast}</Typography>
+          {activeTab === 0 && (
+            <>
+              {/* Image Effects Controls */}
+              <Box sx={{ px: 2, py: 1 }}>
+                <Stack spacing={2}>
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <ContrastIcon sx={{ width: 24, height: 24 }} />
+                      <Typography variant="body2" sx={{ width: 80 }}>Contrast</Typography>
+                      <Slider
+                        value={contrast}
+                        onChange={handleContrastChange}
+                        min={-100}
+                        max={100}
+                        sx={{ width: '200px' }}
+                      />
+                      <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{contrast}</Typography>
+                    </Stack>
+                  </Box>
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <BrightnessIcon sx={{ width: 24, height: 24 }} />
+                      <Typography variant="body2" sx={{ width: 80 }}>Brightness</Typography>
+                      <Slider
+                        value={brightness}
+                        onChange={handleBrightnessChange}
+                        min={-100}
+                        max={100}
+                        sx={{ width: '200px' }}
+                      />
+                      <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{brightness}</Typography>
+                    </Stack>
+                  </Box>
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <FilterBAndWIcon sx={{ width: 24, height: 24 }} />
+                      <Typography variant="body2" sx={{ width: 80 }}>Grayscale</Typography>
+                      <Slider
+                        value={grayscale}
+                        onChange={handleGrayscaleChange}
+                        min={0}
+                        max={100}
+                        sx={{ width: '200px' }}
+                      />
+                      <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{grayscale}%</Typography>
+                    </Stack>
+                  </Box>
                 </Stack>
               </Box>
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <BrightnessIcon sx={{ width: 24, height: 24 }} />
-                  <Typography variant="body2" sx={{ width: 80 }}>Brightness</Typography>
-                  <Slider
-                    value={brightness}
-                    onChange={handleBrightnessChange}
-                    min={-100}
-                    max={100}
-                    sx={{ width: '200px' }}
-                  />
-                  <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{brightness}</Typography>
-                </Stack>
-              </Box>
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <FilterBAndWIcon sx={{ width: 24, height: 24 }} />
-                  <Typography variant="body2" sx={{ width: 80 }}>Grayscale</Typography>
-                  <Slider
-                    value={grayscale}
-                    onChange={handleGrayscaleChange}
-                    min={0}
-                    max={100}
-                    sx={{ width: '200px' }}
-                  />
-                  <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{grayscale}%</Typography>
-                </Stack>
-              </Box>
-            </Stack>
-          </Box>
 
-          {/* Download Button */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, py: 1 }}>
-            <Button
-              variant="contained"
-              startIcon={<DownloadIcon />}
-              onClick={handleDownload}
-            >
-              Download
-            </Button>
-          </Box>
+              {/* Download Button */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, py: 1 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleDownload}
+                >
+                  Download
+                </Button>
+              </Box>
+            </>
+          )}
         </Box>
       </DialogContent>
     </Dialog>
   );
-};
+}
 
 export default ImageModal; 

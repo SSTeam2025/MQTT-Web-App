@@ -1,38 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, CircularProgress, Stack, Chip } from '@mui/material';
-import { getDeviceStatus } from '../requests/dashboard';
-import { deviceStatus as mockedDeviceStatus } from '../mocked/dashboard';
+import React from 'react';
+import { Card, CardContent, Typography, Stack, Chip } from '@mui/material';
 
-const DeviceStatusWidget = () => {
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getDeviceStatus();
-        setStatus(data);
-      } catch {
-        setStatus(mockedDeviceStatus);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
+const DeviceStatusWidget = ({ online = 0, offline = 0 }) => {
   return (
     <Card sx={{ minWidth: 200, minHeight: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
       <CardContent>
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
           Devices Online / Offline
         </Typography>
-        {loading ? <CircularProgress size={24} /> : (
-          <Stack direction="row" spacing={2} justifyContent="center">
-            <Chip label={`Online: ${status.online}`} color="success" />
-            <Chip label={`Offline: ${status.offline}`} color="default" />
-          </Stack>
-        )}
+        <Stack direction="row" spacing={2} justifyContent="center">
+          <Chip label={`Online: ${online}`} color="success" />
+          <Chip label={`Offline: ${offline}`} color="default" />
+        </Stack>
       </CardContent>
     </Card>
   );

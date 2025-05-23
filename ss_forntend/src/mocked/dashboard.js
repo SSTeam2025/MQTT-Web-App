@@ -14,6 +14,15 @@ export const latestImages = [
   { id: 6, url: 'https://placehold.co/300x180?text=Image+6', deviceName: 'Sensor F', timestamp: '2024-05-15 09:10' }
 ];
 
+// New mocked devices array to match /devices endpoint
+export const mockedDevices = [
+  { deviceId: 'device_001', status: 'online' },
+  { deviceId: 'device_002', status: 'offline' },
+  { deviceId: 'device_003', status: 'online' },
+  { deviceId: 'device_004', status: 'offline' },
+  { deviceId: 'device_005', status: 'online' }
+];
+
 export const activeDevices = [
   {
     id: '1',
@@ -36,12 +45,4 @@ export const activeDevices = [
     lastImageUrl: 'https://placehold.co/300x180?text=Lock+C',
     parameters: { locked: 'yes', battery: '60%' }
   }
-];
-
-export const lastUsedDevice = {
-  id: 'last-used',
-  name: 'Mocked Last Used Device',
-  status: 'online',
-  lastImageUrl: 'https://placehold.co/300x180?text=Last+Used',
-  parameters: { temp: '24°C', battery: '90%' }
-}; 
+]; 

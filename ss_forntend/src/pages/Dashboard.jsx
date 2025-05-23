@@ -1,20 +1,50 @@
-import React from 'react';
-import { AppBar, Toolbar, Typography, Box, Grid } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { AppBar, Toolbar, Typography, Box, Grid, Chip, List, ListItem, ListItemText, Stack } from '@mui/material';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import LastUsedDevice from '../components/LastUsedDevice';
 import TotalImagesTodayWidget from '../components/TotalImagesTodayWidget';
 import DeviceStatusWidget from '../components/DeviceStatusWidget';
 import LatestImagesGrid from '../components/LatestImagesGrid';
 import ActiveDevicesList from '../components/ActiveDevicesList';
+import { getAllDevices } from '../requests/devices';
+import { getAllImages } from '../requests/gallery';
+import { latestImages, mockedDevices } from '../mocked/dashboard';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [devices, setDevices] = useState([]);
+  const [realImages, setRealImages] = useState([]);
+
+  useEffect(() => {
+    getAllDevices().then(devices => {
+      setDevices(devices);
+      console.log('Dashboard devices from /devices endpoint:', devices);
+    }).catch(err => {
+      setDevices([]);
+      console.error('Error fetching devices for dashboard:', err);
+    });
+    getAllImages().then(setRealImages);
+  }, []);
+
+  // Compute today's date string (YYYY-MM-DD)
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // Count images taken today from real images
+  const totalImagesToday = realImages.filter(img =>
+    img.timestamp && img.timestamp.startsWith(todayStr)
+  ).length;
+
+  // Count online/offline devices from fetched devices
+  const onlineCount = devices.filter(d => d.status === 'online').length;
+  const offlineCount = devices.filter(d => d.status === 'offline').length;
+  console.log('Devices:', devices);
+  console.log('Online count:', onlineCount);
+  console.log('Offline count:', offlineCount);
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -51,19 +81,25 @@ const Dashboard = () => {
             </Typography>
             <Grid container spacing={2} sx={{ mt: 4 }}>
               <Grid item xs={12} md={4} lg={3}>
-                <TotalImagesTodayWidget />
+                <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
+                  <Typography variant="subtitle1" gutterBottom>Total Images Today</Typography>
+                  <Typography variant="h4">{totalImagesToday}</Typography>
+                </Box>
               </Grid>
               <Grid item xs={12} md={4} lg={3}>
-                <DeviceStatusWidget />
+                
+              </Grid>
+              <Grid item xs={12} md={4} lg={3}>
+                <DeviceStatusWidget online={onlineCount} offline={offlineCount} />
               </Grid>
             </Grid>
-            <Box sx={{ mt: 2 }}>
-              <LastUsedDevice />
-            </Box>
-            <LatestImagesGrid title="Latest Images" />
+            <Box sx={{ mt: 2 }} />
             <Box sx={{ pb: 6 }}>
               <ActiveDevicesList title="Active Devices" />
             </Box>
+            <LatestImagesGrid title="Today's Images" images={realImages} />
+            <Box sx={{ mt: 6 }}></Box>
+            <Box sx={{ pb: 6 }}></Box>
           </>
         )}
         <Outlet />

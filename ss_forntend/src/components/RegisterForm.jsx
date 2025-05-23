@@ -126,23 +126,23 @@ const RegisterForm = ({ onSubmit, isLoading, error, successMessage }) => {
         </Alert>
       )}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          fullWidth
+      <TextField
+        fullWidth
           label="Name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          error={showValidation && !!validationErrors.name}
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        error={showValidation && !!validationErrors.name}
           helperText={showValidation && validationErrors.name}
-        />
-        <TextField
-          fullWidth
+      />
+      <TextField
+        fullWidth
           label="Email"
-          name="email"
+        name="email"
           type="email"
-          value={formData.email}
-          onChange={handleChange}
-          error={showValidation && !!validationErrors.email}
+        value={formData.email}
+        onChange={handleChange}
+        error={showValidation && !!validationErrors.email}
           helperText={showValidation && validationErrors.email}
         />
         <FormControl 
@@ -175,14 +175,14 @@ const RegisterForm = ({ onSubmit, isLoading, error, successMessage }) => {
             </Typography>
           )}
         </FormControl>
-        <TextField
-          fullWidth
+      <TextField
+        fullWidth
           label="Password"
-          name="password"
-          type="password"
-          value={formData.password}
-          onChange={handleChange}
-          error={hasPasswordError}
+        name="password"
+        type="password"
+        value={formData.password}
+        onChange={handleChange}
+        error={hasPasswordError}
         />
         <TextField
           fullWidth
@@ -193,19 +193,19 @@ const RegisterForm = ({ onSubmit, isLoading, error, successMessage }) => {
           onChange={handleChange}
           error={showValidation && !!validationErrors.confirmPassword}
           helperText={showValidation && validationErrors.confirmPassword}
-        />
-        {hasPasswordError && (
+      />
+      {hasPasswordError && (
           <List dense>
             {validationErrors.password.map((error, index) => (
               <ListItem key={index}>
-                <ListItemText
+              <ListItemText 
                   primary={error}
                   primaryTypographyProps={{ color: 'error' }}
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
+              />
+            </ListItem>
+          ))}
+        </List>
+      )}
       </Box>
       <Button
         type="submit"
@@ -219,7 +219,7 @@ const RegisterForm = ({ onSubmit, isLoading, error, successMessage }) => {
       </Button>
       <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
         Already have an account? <Link to="/login">Log in</Link>
-      </Typography>
+            </Typography>
     </Box>
   );
 };

@@ -31,12 +31,12 @@ function App() {
               index
               element={
                 <>
-                  <Typography variant="h4" gutterBottom>
+                  {/* <Typography variant="h4" gutterBottom>
                     Welcome to the Dashboard
                   </Typography>
                   <Typography>
                     Select an item from the sidebar to manage your devices or view other sections.
-                  </Typography>
+                  </Typography> */}
                 </>
               }
             />

@@ -13,6 +13,7 @@ import {
   gallerySortOptions as mockedGallerySortOptions
 } from '../mocked/gallery';
 import ImageModal from '../components/ImageModal';
+import { getAllDevices } from '../requests/devices';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -27,7 +28,7 @@ const Gallery = () => {
   const [sortOptions, setSortOptions] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState('all');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [selectedSort, setSelectedSort] = useState('latest');
+  const [selectedSort, setSelectedSort] = useState('newest');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
 
@@ -37,27 +38,34 @@ const Gallery = () => {
       try {
         // First fetch real images
         const realImg = await getAllImages();
-        console.log('Real images fetched:', realImg);
         setRealImages(realImg);
 
+        // Fetch devices from the new endpoint
+        const devicesFromApi = await getAllDevices();
+        console.log('Devices from API:', devicesFromApi);
+        var devicesList = devicesFromApi.map(d => ({ id: d.deviceId, name: d.deviceId }));
+        console.log('Devices list:', devicesList);
+        if (!devicesList.some(d => d.id === 'all')) {
+          devicesList = [{ id: 'all', name: 'All Devices' }, ...devicesList];
+        }
+        console.log('Devices list after adding all:', devicesList);
+        devicesList = [...devicesList, { id: 'processed', name: 'Processed' }];
+        console.log('Devices list after adding processed:', devicesList);
+        setDevices(devicesList);
+        console.log('Devices list after setting:', devicesList);
         // Then fetch other data
-        const [dev, fil, sort] = await Promise.all([
-          getGalleryDevices(),
+        const [fil, sort] = await Promise.all([
           getGalleryFilters(),
           getGallerySortOptions()
         ]);
-        
         setImages(mockedAllImages); // Set mocked images
-        setDevices(dev);
         // Ensure 'All Time' is always present
         const hasAllTime = fil.some(f => f.value === 'all');
         setFilters(hasAllTime ? fil : [{ value: 'all', label: 'All Time' }, ...fil]);
         setSortOptions(sort);
       } catch (error) {
-        console.error('Error fetching data:', error);
         setImages(mockedAllImages);
-        setDevices(mockedGalleryDevices);
-        // Ensure 'All Time' is always present in mocked data too
+        // setDevices([]);
         const hasAllTime = mockedGalleryFilters.some(f => f.value === 'all');
         setFilters(hasAllTime ? mockedGalleryFilters : [{ value: 'all', label: 'All Time' }, ...mockedGalleryFilters]);
         setSortOptions(mockedGallerySortOptions);
@@ -68,48 +76,17 @@ const Gallery = () => {
     fetchAll();
   }, []);
 
-  // Filtering for mocked images
-  /*
-  let filteredImages = images;
-  if (selectedDevice && selectedDevice !== 'all') {
-    filteredImages = filteredImages.filter(img => img.deviceId === selectedDevice);
-  }
-  // Time filter (mocked, just for demo)
-  if (selectedFilter) {
-    const now = new Date();
-    filteredImages = filteredImages.filter(img => {
-      const imgDate = new Date(img.timestamp);
-      if (selectedFilter === 'day') {
-        return imgDate.toDateString() === now.toDateString();
-      } else if (selectedFilter === 'week') {
-        const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
-        return imgDate >= weekAgo;
-      } else if (selectedFilter === 'month') {
-        return imgDate.getMonth() === now.getMonth() && imgDate.getFullYear() === now.getFullYear();
-      } else if (selectedFilter === 'year') {
-        return imgDate.getFullYear() === now.getFullYear();
-      }
-      return true;
-    });
-  }
-  // Sorting for mocked images
-  filteredImages = filteredImages.sort((a, b) => {
-    if (selectedSort === 'latest') {
-      return new Date(b.timestamp) - new Date(a.timestamp);
-    } else {
-      return new Date(a.timestamp) - new Date(b.timestamp);
-    }
-  });
-  */
-
   // Filter real images
   const filteredRealImages = realImages
-    .filter(img => selectedDevice === 'all' || img.deviceId === selectedDevice)
+    .filter(img => {
+      if (selectedDevice === 'all') return true;
+      if (selectedDevice === 'processed') return img.deviceId === 'Processed';
+      return img.deviceId === selectedDevice;
+    })
     .filter(img => {
       if (selectedFilter === 'all') return true;
       const imgDate = new Date(img.timestamp);
       const now = new Date();
-      
       if (selectedFilter === 'day') {
         return imgDate.toDateString() === now.toDateString();
       } else if (selectedFilter === 'week') {
@@ -124,7 +101,7 @@ const Gallery = () => {
       return true;
     })
     .sort((a, b) => {
-      if (selectedSort === 'latest') {
+      if (selectedSort === 'newest') {
         return new Date(b.timestamp) - new Date(a.timestamp);
       } else {
         return new Date(a.timestamp) - new Date(b.timestamp);
@@ -184,8 +161,8 @@ const Gallery = () => {
       id: processedImage.filename,
       filename: processedImage.filename,
       url: processedImage.url,
-      deviceId: selectedImage?.deviceId || 'Unknown',
-      deviceName: selectedImage?.deviceName || 'Unknown',
+      deviceId: 'Processed',
+      deviceName: 'Processed',
       timestamp: new Date().toISOString()
     }]);
   };

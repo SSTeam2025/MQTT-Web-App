@@ -36,7 +36,7 @@ export async function getAllImages() {
 }
 
 export async function getGalleryDevices() {
-  const response = await fetch('http://localhost:8081/api/devices/all');
+  const response = await fetch('http://localhost:8081/api/devices');
   if (!response.ok) throw new Error('Failed to fetch gallery devices');
   return await response.json();
 }

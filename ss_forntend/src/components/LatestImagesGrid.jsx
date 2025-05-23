@@ -8,7 +8,7 @@ import { latestImages as mockedLatestImages } from '../mocked/dashboard';
 const IMAGES_PER_PAGE = 4;
 const ANIMATION_DURATION = 350; // ms
 
-const LatestImagesGrid = ({ title = 'Last Images Received' }) => {
+const LatestImagesGrid = ({ title = 'Last Images Received', images: propImages }) => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -16,18 +16,23 @@ const LatestImagesGrid = ({ title = 'Last Images Received' }) => {
   const [direction, setDirection] = useState('');
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getLatestImages();
-        setImages(data);
-      } catch {
-        setImages(mockedLatestImages);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    if (propImages) {
+      setImages(propImages);
+      setLoading(false);
+    } else {
+      const fetchData = async () => {
+        try {
+          const data = await getLatestImages();
+          setImages(data);
+        } catch {
+          setImages(mockedLatestImages);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [propImages]);
 
   const maxPage = Math.max(0, Math.ceil(images.length / IMAGES_PER_PAGE) - 1);
   const startIdx = page * IMAGES_PER_PAGE;
@@ -94,7 +99,7 @@ const LatestImagesGrid = ({ title = 'Last Images Received' }) => {
                     />
                     <CardContent sx={{ p: 1 }}>
                       <Typography variant="caption" color="text.secondary">
-                        {img.deviceName} <br /> {img.timestamp}
+                        {img.deviceName} <br /> {img.timestamp.slice(11, 19)}
                       </Typography>
                     </CardContent>
                   </Card>
