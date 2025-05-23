@@ -55,11 +55,11 @@ device/{deviceId}/live – stream live de imagini (modul live)
 
 HTTP REST (backend Spring Boot):
 
-/api/capture – solicitare captură imagine
+/capture – solicitare captură imagine
 
-/api/images/{deviceId}/latest – returnează ultima imagine ca fișier
+/images/{deviceId}/latest – returnează ultima imagine ca fișier
 
-/api/live-control – trimite comenzi live (start/stop)
+/live – trimite comenzi live (start/stop)
 
 PostgreSQL:
 
