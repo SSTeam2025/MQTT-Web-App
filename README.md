@@ -1,6 +1,9 @@
 # MQTT-Web-App
 Documentație Backend - Platformă Recepție și Procesare Imagini prin MQTT
 
+<img src="https://github.com/user-attachments/assets/80e14385-795b-4b6f-b0bf-4dc2cee60cc7" width="400"/>
+<img src="https://github.com/user-attachments/assets/eb243424-c6ca-40e7-960c-6313a24d694d" width="420"/>
+
 1. Recepția și salvarea imaginilor transmise prin MQTT
 
 Platforma se conectează la un broker MQTT și se abonează la topicurile de tip images/{deviceId} pentru a primi imagini de la dispozitive mobile. Fiecare mesaj conține o imagine codificată în Base64 însoțită de metadate precum formatul, numele fișierului și ID-ul dispozitivului. Imaginile sunt decodificate, redimensionate pentru optimizare și salvate local. Metadatele sunt stocate în baza de date PostgreSQL.
