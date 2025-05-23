@@ -16,16 +16,34 @@ import RotateRightIcon from '@mui/icons-material/RotateRight';
 import DownloadIcon from '@mui/icons-material/Download';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import ContrastIcon from '@mui/icons-material/Contrast';
+import BrightnessIcon from '@mui/icons-material/Brightness6';
+import FilterBAndWIcon from '@mui/icons-material/FilterBAndW';
 
-const ImageModal = ({ open, onClose, image }) => {
+const ImageModal = ({ open, onClose, image, onImageProcessed }) => {
   const [rotation, setRotation] = useState(0);
   const [scale, setScale] = useState(1);
+  const [contrast, setContrast] = useState(0);
+  const [brightness, setBrightness] = useState(0);
+  const [grayscale, setGrayscale] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0 });
   const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });
   const imageRef = useRef(null);
   const containerRef = useRef(null);
+
+  // Reset all values when modal closes
+  useEffect(() => {
+    if (!open) {
+      setRotation(0);
+      setScale(1);
+      setContrast(0);
+      setBrightness(0);
+      setGrayscale(0);
+      setImageLoaded(false);
+    }
+  }, [open]);
 
   const handleRotateLeft = () => {
     setRotation((prev) => (prev - 90) % 360);
@@ -37,6 +55,18 @@ const ImageModal = ({ open, onClose, image }) => {
 
   const handleZoomChange = (event, newValue) => {
     setScale(newValue);
+  };
+
+  const handleContrastChange = (event, newValue) => {
+    setContrast(newValue);
+  };
+
+  const handleBrightnessChange = (event, newValue) => {
+    setBrightness(newValue);
+  };
+
+  const handleGrayscaleChange = (event, newValue) => {
+    setGrayscale(newValue);
   };
 
   const handleMouseDown = (e) => {
@@ -83,35 +113,80 @@ const ImageModal = ({ open, onClose, image }) => {
     };
   }, [isResizing]);
 
-  const handleDownload = () => {
-    const canvas = document.createElement('canvas');
-    const img = imageRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    // Set canvas size to match the transformed image
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    
-    // Apply transformations
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.scale(scale, scale);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-    
-    // Draw the image
-    ctx.drawImage(img, 0, 0);
-    
-    // Convert to blob and download
-    canvas.toBlob((blob) => {
+  const handleDownload = async () => {
+    try {
+      console.log('Selected Image:', image);
+      console.log('Image Filename:', image.id);
+      console.log('All Image Fields:', Object.keys(image));
+
+      const response = await fetch('http://localhost:8081/images/apply-filters', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          filename: image.id,
+          contrast: contrast,
+          brightness: brightness,
+          grayscale: grayscale
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process image');
+      }
+
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      // Fetch the image using the URL from the response
+      const imageResponse = await fetch(data.url);
+      if (!imageResponse.ok) {
+        throw new Error('Failed to fetch processed image');
+      }
+
+      const blob = await imageResponse.blob();
+      
+      // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `image-${image.id}.png`;
+      a.download = data.filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    });
+
+      // Notify parent component that a new image was processed
+      if (onImageProcessed) {
+        onImageProcessed(data);
+      }
+    } catch (error) {
+      console.error('Error downloading processed image:', error);
+      // You might want to show an error message to the user here
+    }
+  };
+
+  const getImageStyle = () => {
+    // Convert contrast to match backend's factor calculation
+    const contrastFactor = Math.pow((100 + contrast) / 100, 2);
+    const contrastValue = contrastFactor * 100;
+
+    // Brightness is already in the correct range (-100 to 100)
+    const brightnessValue = brightness + 100;
+
+    // Grayscale is already in the correct range (0 to 100)
+    const grayscaleValue = grayscale;
+
+    return {
+      maxWidth: '100%',
+      maxHeight: '70vh',
+      transform: `rotate(${rotation}deg) scale(${scale})`,
+      transition: 'transform 0.3s ease-in-out',
+      opacity: imageLoaded ? 1 : 0,
+      position: 'relative',
+      filter: `contrast(${contrastValue}%) brightness(${brightnessValue}%) grayscale(${grayscaleValue}%)`
+    };
   };
 
   return (
@@ -128,7 +203,7 @@ const ImageModal = ({ open, onClose, image }) => {
       }}
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">Image Details</Typography>
+        <Typography variant="h5">Image Details</Typography>
         <IconButton onClick={onClose}>
           <CloseIcon />
         </IconButton>
@@ -154,14 +229,7 @@ const ImageModal = ({ open, onClose, image }) => {
               id="modal-image"
               src={image?.url}
               alt={image?.deviceName}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '70vh',
-                transform: `rotate(${rotation}deg)`,
-                transition: 'transform 0.3s ease-in-out',
-                opacity: imageLoaded ? 1 : 0,
-                position: 'relative'
-              }}
+              style={getImageStyle()}
               onLoad={() => setImageLoaded(true)}
             />
             <Box
@@ -217,6 +285,58 @@ const ImageModal = ({ open, onClose, image }) => {
                 <ZoomInIcon />
               </Stack>
             </Box>
+          </Stack>
+
+          {/* Image Effects Controls */}
+          <Box sx={{ px: 2, py: 1 }}>
+            <Stack spacing={2}>
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <ContrastIcon sx={{ width: 24, height: 24 }} />
+                  <Typography variant="body2" sx={{ width: 80 }}>Contrast</Typography>
+                  <Slider
+                    value={contrast}
+                    onChange={handleContrastChange}
+                    min={-100}
+                    max={100}
+                    sx={{ width: '200px' }}
+                  />
+                  <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{contrast}</Typography>
+                </Stack>
+              </Box>
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <BrightnessIcon sx={{ width: 24, height: 24 }} />
+                  <Typography variant="body2" sx={{ width: 80 }}>Brightness</Typography>
+                  <Slider
+                    value={brightness}
+                    onChange={handleBrightnessChange}
+                    min={-100}
+                    max={100}
+                    sx={{ width: '200px' }}
+                  />
+                  <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{brightness}</Typography>
+                </Stack>
+              </Box>
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <FilterBAndWIcon sx={{ width: 24, height: 24 }} />
+                  <Typography variant="body2" sx={{ width: 80 }}>Grayscale</Typography>
+                  <Slider
+                    value={grayscale}
+                    onChange={handleGrayscaleChange}
+                    min={0}
+                    max={100}
+                    sx={{ width: '200px' }}
+                  />
+                  <Typography variant="body2" sx={{ width: 40, textAlign: 'right' }}>{grayscale}%</Typography>
+                </Stack>
+              </Box>
+            </Stack>
+          </Box>
+
+          {/* Download Button */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, py: 1 }}>
             <Button
               variant="contained"
               startIcon={<DownloadIcon />}
@@ -224,7 +344,7 @@ const ImageModal = ({ open, onClose, image }) => {
             >
               Download
             </Button>
-          </Stack>
+          </Box>
         </Box>
       </DialogContent>
     </Dialog>
