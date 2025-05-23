@@ -126,6 +126,38 @@ public class ImageController {
         return ResponseEntity.ok(images.stream().map(this::toDTO).toList());
     }
 
+    @GetMapping("/{deviceId}/latest")
+    public ResponseEntity<org.springframework.core.io.Resource> getLatestImageFile(@PathVariable String deviceId) {
+        return imageRepository.findTopByDeviceIdOrderByUploadDateDesc(deviceId)
+                .map(image -> {
+                    try {
+                        Path filePath = Paths.get("uploads").resolve(image.getFilename()).normalize();
+                        org.springframework.core.io.Resource resource = new UrlResource(filePath.toUri());
+
+                        if (!resource.exists()) {
+                            return ResponseEntity.notFound().<org.springframework.core.io.Resource>build();
+                        }
+
+                        MediaType contentType = getMediaType(image.getFormat());
+
+                        return ResponseEntity.ok()
+                                .contentType(contentType)
+                                .body(resource);
+
+                    } catch (Exception e) {
+                        return ResponseEntity.internalServerError().<org.springframework.core.io.Resource>build();
+                    }
+                })
+                .orElse(ResponseEntity.notFound().<org.springframework.core.io.Resource>build());
+    }
+
+    private MediaType getMediaType(String format) {
+        return switch (format.toLowerCase()) {
+            case "image/jpeg", "jpeg", "jpg" -> MediaType.IMAGE_JPEG;
+            case "image/png", "png" -> MediaType.IMAGE_PNG;
+            default -> MediaType.APPLICATION_OCTET_STREAM;
+        };
+    }
     @GetMapping("/filter")
     public ResponseEntity<List<ImageDTO>> filterImages(
             @RequestParam(required = false) String deviceId,

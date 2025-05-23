@@ -30,6 +30,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()  // ✅ allow access to register/login
                         .requestMatchers("/images/**").permitAll() // ← ✅ permite accesul public
+                        .requestMatchers("/live/**").permitAll()
+                        .requestMatchers("/capture/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess

@@ -16,5 +16,6 @@ public interface ImageRepository extends JpaRepository<ImageEntity, Long> {
 
     List<ImageEntity> findByDeviceIdAndUploadDateBetween(String deviceId, LocalDateTime start, LocalDateTime end);
     Optional<ImageEntity> findByFilename(String filename);
+    Optional<ImageEntity> findTopByDeviceIdOrderByUploadDateDesc(String deviceId);
 
 }
