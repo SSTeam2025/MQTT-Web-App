@@ -34,8 +34,25 @@ const Dashboard = () => {
     fetchDevices();
     intervalId = setInterval(fetchDevices, 5000); // Poll every 5 seconds
     getAllImages().then(setRealImages);
-    return () => clearInterval(intervalId);
+
+    // Listen for imageProcessed event to refresh images
+    const handleImageProcessed = () => {
+      getAllImages().then(setRealImages);
+    };
+    window.addEventListener('imageProcessed', handleImageProcessed);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('imageProcessed', handleImageProcessed);
+    };
   }, []);
+
+  useEffect(() => {
+    if (location.pathname === '/dashboard') {
+      getAllImages().then(setRealImages);
+      
+    }
+  }, [location.pathname]);
 
   // Compute today's date string (YYYY-MM-DD)
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -76,6 +93,23 @@ const Dashboard = () => {
           <Typography variant="h6" noWrap component="div">
             CamViewer
           </Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          <Box>
+            <Typography variant="body1" sx={{ mr: 2, display: 'inline' }}>
+              {user?.username}
+            </Typography>
+            <button onClick={handleLogout} style={{
+              background: '#1976d2',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '6px 16px',
+              cursor: 'pointer',
+              fontSize: '1rem'
+            }}>
+              Logout
+            </button>
+          </Box>
         </Toolbar>
       </AppBar>
 

@@ -201,11 +201,18 @@ const DeviceCard = ({ device, firstImageUrl }) => {
           </Typography>
           <Box sx={{ mb: 2, mt: 1 }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Image</Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400, minWidth: 400, mb: 0 }}>
               {isLive ? (
-                <LiveViewer topic={`devices/${device.deviceId || device.id}`} title="Live MQTT Feed" style={{ background: '#f5f5f5', borderRadius: 8, padding: 12 }} />
+                <LiveViewer 
+                  topic={`devices/${device.deviceId || device.id}`}
+                  style={{ maxWidth: 400, maxHeight: 400, borderRadius: 8, display: 'block', margin: '0 auto' }}
+                />
               ) : (latestImageUrl || firstImageUrl) ? (
-                <img src={latestImageUrl || firstImageUrl} alt="Device" style={{ maxWidth: '100%' }} />
+                <img 
+                  src={latestImageUrl || firstImageUrl} 
+                  alt="Device" 
+                  style={{ maxWidth: 400, maxHeight: 400, borderRadius: 8, display: 'block', margin: '0 auto' }} 
+                />
               ) : (
                 <Typography>No image available</Typography>
               )}
@@ -236,7 +243,15 @@ const DeviceCard = ({ device, firstImageUrl }) => {
             <Typography variant="body1" sx={{ ml: 1, fontWeight: !isLive ? 'bold' : 'normal', color: !isLive ? 'primary.main' : 'text.secondary' }}>Timed</Typography>
           </Box>
           <Stack direction="row" spacing={2}>
-            <Button variant="contained" color="primary" onClick={handleCapture} disabled={loadingCapture || isLive}>{loadingCapture ? 'Capturing...' : 'Capture'}</Button>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleCapture} 
+              disabled={loadingCapture || isLive}
+              sx={{ minWidth: 140, height: 40, justifyContent: 'center' }}
+            >
+              {loadingCapture ? 'Capturing...' : 'Capture'}
+            </Button>
           </Stack>
         </Box>
       </Modal>

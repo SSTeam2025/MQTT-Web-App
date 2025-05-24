@@ -213,6 +213,10 @@ function ImageModal({ open, onClose, image, onImageProcessed }) {
       if (onImageProcessed) {
         onImageProcessed(data);
       }
+      // Dispatch custom event for global listeners (e.g., Dashboard)
+      window.dispatchEvent(new Event('imageProcessed'));
+      // If currently in gallery, navigate to dashboard and reload. Do not reload gallery page itself.
+    
     } catch (error) {
       console.error('Error downloading processed image:', error);
       // You might want to show an error message to the user here

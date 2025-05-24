@@ -56,7 +56,7 @@ return (
     <div>
       {/* Removed 'Live Image' text */}
       {imageSrc ? (
-        <img src={imageSrc} alt="Live stream" style={{ maxWidth: '100%' }} />
+        <img src={imageSrc} alt="Live stream" style={style} />
       ) : (
         <p>No image received yet</p>
       )}
