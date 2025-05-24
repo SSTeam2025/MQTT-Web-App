@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -53,7 +54,6 @@ public class CameraFragment extends Fragment
     private static final int LIVE_INTERVAL_SEC = 5;
 
     private PreviewView preview;
-    private Button backBtn;
     private View marker;
     private TextView resTv;
     private boolean highRes = true;
@@ -75,10 +75,11 @@ public class CameraFragment extends Fragment
         return i.inflate(R.layout.fragment_camera, c, false);
     }
 
+    @Deprecated
     @Override
     public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
         preview = v.findViewById(R.id.cameraPreview);
-        backBtn = v.findViewById(R.id.backButton);
+        Button backBtn = v.findViewById(R.id.backButton);
         marker = v.findViewById(R.id.liveMarker);
         resTv = v.findViewById(R.id.resIndicator);
 
@@ -123,13 +124,16 @@ public class CameraFragment extends Fragment
                 scheduler = Executors.newSingleThreadScheduledExecutor();
                 schedulePeriodic();   // start with NORMAL interval
 
-            } catch (Exception ignore) {
+            } catch (Exception e) {
+                Log.w("", e);
             }
         }, ContextCompat.getMainExecutor(requireContext()));
     }
 
     private void schedulePeriodic() {
-        if (periodicTask != null && !periodicTask.isCancelled()) periodicTask.cancel(false);
+        if (periodicTask != null && !periodicTask.isCancelled()) {
+            periodicTask.cancel(false);
+        }
         int sec = MqttSession.isLive() ? LIVE_INTERVAL_SEC : NORMAL_INTERVAL_SEC;
         periodicTask = scheduler.scheduleAtFixedRate(this::periodicShot, 0, sec, TimeUnit.SECONDS);
     }
@@ -153,10 +157,14 @@ public class CameraFragment extends Fragment
                 @Override
                 public void onImageSaved(@NonNull ImageCapture.OutputFileResults r) {
                     Bitmap bmp = decodeScaled(tmp);
-                    if (saveGallery) saveToGallery(bmp);
+                    if (saveGallery) {
+                        saveToGallery(bmp);
+                    }
                     String topic = forceLiveTopic ? MqttSession.liveTopic() : MqttSession.normalTopic();
                     publishImage(bmp, topic);
-                    tmp.delete();
+                    if (!tmp.delete()) {
+                        Log.w("", "Not deleted");
+                    }
                 }
 
                 @Override
@@ -164,7 +172,8 @@ public class CameraFragment extends Fragment
                     e.printStackTrace();
                 }
             });
-        } catch (Exception ignore) {
+        } catch (Exception e) {
+            Log.w("", e);
         }
     }
 
@@ -174,7 +183,9 @@ public class CameraFragment extends Fragment
         BitmapFactory.decodeFile(f.getAbsolutePath(), o);
         int target = highRes ? 1024 : 480;
         int sc = 1;
-        while (Math.max(o.outWidth, o.outHeight) / sc > target) sc *= 2;
+        while (Math.max(o.outWidth, o.outHeight) / sc > target) {
+            sc *= 2;
+        }
         o.inJustDecodeBounds = false;
         o.inSampleSize = sc;
         return BitmapFactory.decodeFile(f.getAbsolutePath(), o);
@@ -193,12 +204,15 @@ public class CameraFragment extends Fragment
                 os = requireContext().getContentResolver().openOutputStream(uri);
             } else {
                 File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "imaginiSS");
-                if (!dir.exists()) dir.mkdirs();
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
                 os = new FileOutputStream(new File(dir, name));
             }
             bmp.compress(Bitmap.CompressFormat.JPEG, 80, os);
             os.close();
         } catch (Exception e) {
+            Log.w("", e);
             e.printStackTrace();
         }
     }
@@ -245,7 +259,9 @@ public class CameraFragment extends Fragment
 
     @Override
     public void onCaptureRequest() {
-        if (!MqttSession.isLive()) captureAndPublish(false, false);
+        if (!MqttSession.isLive()) {
+            captureAndPublish(false, false);
+        }
     }
 
     @Override
@@ -267,11 +283,16 @@ public class CameraFragment extends Fragment
     public void onDestroyView() {
         super.onDestroyView();
         sendDisconnect();
-        if (scheduler != null) scheduler.shutdownNow();
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
     }
 
+    @Deprecated
     @Override
     public void onRequestPermissionsResult(int rq, @NonNull String[] p, @NonNull int[] r) {
-        if (rq == 101 && r.length > 0 && r[0] == PackageManager.PERMISSION_GRANTED) startCam();
+        if (rq == 101 && r.length > 0 && r[0] == PackageManager.PERMISSION_GRANTED) {
+            startCam();
+        }
     }
 }

@@ -50,7 +50,9 @@ public final class MqttSession {
 
     public static void setLive(boolean value) {
         if (LIVE.getAndSet(value) != value) {
-            for (LiveModeListener l : listeners) l.onLiveModeChanged(value);
+            for (LiveModeListener l : listeners) {
+                l.onLiveModeChanged(value);
+            }
         }
     }
 

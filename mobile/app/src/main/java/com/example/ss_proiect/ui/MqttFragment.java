@@ -4,6 +4,7 @@ import static com.hivemq.client.mqtt.MqttGlobalPublishFilter.ALL;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,6 +25,8 @@ import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 
 import org.json.JSONObject;
 
+import java.util.Locale;
+
 public class MqttFragment extends Fragment {
 
     private static final String CMD_START_LIVE = "start_live";
@@ -32,7 +35,7 @@ public class MqttFragment extends Fragment {
 
     // UI
     private EditText hostEdit, userEdit, passEdit;
-    private Button connectBtn, navCamBtn;
+    private Button navCamBtn;
     private TextView logView;
 
     // MQTT
@@ -52,7 +55,7 @@ public class MqttFragment extends Fragment {
         userEdit = v.findViewById(R.id.usernameEdit);
         passEdit = v.findViewById(R.id.passwordEdit);
 
-        connectBtn = v.findViewById(R.id.connectButton);
+        Button connectBtn = v.findViewById(R.id.connectButton);
         navCamBtn = v.findViewById(R.id.navCameraButton);
         logView = v.findViewById(R.id.logView);
 
@@ -97,7 +100,7 @@ public class MqttFragment extends Fragment {
 
                 client.toAsync().publishes(ALL, p -> {
 
-                    if (!p.getPayload().isPresent()) return;
+                    if (p.getPayload().isEmpty()) return;
 
                     String payload = UTF_8.decode(p.getPayload().get()).toString();
                     String t   = p.getTopic().toString();
@@ -107,23 +110,26 @@ public class MqttFragment extends Fragment {
                             JSONObject obj = new JSONObject(payload);
                             String cmd = obj.optString("command", "").trim();
                             handleCommand(cmd);
-                        } catch (Exception ignore) {}
+                        } catch (Exception e) {
+                            Log.w("", e);
+                        }
                     }
 
                     append("<< " + t + " : " +
-                            (payload.length() > 120 ? payload.substring(0, 120) + "…" : payload));
+                            (payload.length() > 120 ? (payload.substring(0, 120) + "…") : payload));
                 });
 
                 MqttSession.setClient(client);
 
             } catch (Exception e) {
                 requireActivity().runOnUiThread(() -> append("Err: " + e.getMessage()));
+                Log.w("", e);
             }
         }).start();
     }
 
     private void handleCommand(String cmd) {
-        switch (cmd.toLowerCase()) {
+        switch (cmd.toLowerCase(Locale.getDefault())) {
             case CMD_START_LIVE:
                 MqttSession.setLive(true);
                 break;
@@ -131,15 +137,20 @@ public class MqttFragment extends Fragment {
                 MqttSession.setLive(false);
                 break;
             case CMD_CAPTURE:
-                if (!MqttSession.isLive()) MqttSession.requestCapture();
+                if (!MqttSession.isLive()) {
+                    MqttSession.requestCapture();
+                }
+                break;
+            default:
                 break;
         }
     }
 
     public void append(String txt) {
         requireActivity().runOnUiThread(() -> {
-            if (logView.getText().length() > 10_000)
+            if (logView.getText().length() > 10_000) {
                 logView.setText("");
+            }
             logView.append(txt + "\n");
         });
     }
