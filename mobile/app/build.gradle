@@ -39,8 +39,10 @@ dependencies {
     implementation libs.material
     implementation libs.activity
     implementation libs.constraintlayout
+    implementation libs.camera.view
     implementation libs.navigation.fragment
     implementation libs.navigation.ui
+    implementation libs.camera.lifecycle
     testImplementation libs.junit
     testImplementation libs.ext.junit
     androidTestImplementation libs.ext.junit
