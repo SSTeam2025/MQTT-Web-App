@@ -1,66 +1,142 @@
 package com.example.ss_proiect.ui;
 
+import static com.hivemq.client.mqtt.MqttGlobalPublishFilter.ALL;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import android.os.Bundle;
-
-import androidx.fragment.app.Fragment;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.navigation.fragment.NavHostFragment;
 
 import com.example.ss_proiect.R;
+import com.example.ss_proiect.util.MqttSession;
+import com.hivemq.client.mqtt.MqttClient;
+import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link MqttFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
+import org.json.JSONObject;
+
 public class MqttFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    private static final String CMD_START_LIVE = "start_live";
+    private static final String CMD_STOP_LIVE = "stop_live";
+    private static final String CMD_CAPTURE = "capture";
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    // UI
+    private EditText hostEdit, userEdit, passEdit;
+    private Button connectBtn, navCamBtn;
+    private TextView logView;
 
-    public MqttFragment() {
-        // Required empty public constructor
-    }
+    // MQTT
+    private Mqtt5BlockingClient client;
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment MqttFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static MqttFragment newInstance(String param1, String param2) {
-        MqttFragment fragment = new MqttFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_mqtt, container, false);
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+    public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
+        hostEdit = v.findViewById(R.id.hostEdit);
+        userEdit = v.findViewById(R.id.usernameEdit);
+        passEdit = v.findViewById(R.id.passwordEdit);
+
+        connectBtn = v.findViewById(R.id.connectButton);
+        navCamBtn = v.findViewById(R.id.navCameraButton);
+        logView = v.findViewById(R.id.logView);
+
+        connectBtn.setOnClickListener(x -> connect());
+        navCamBtn.setOnClickListener(x ->
+                NavHostFragment.findNavController(this).navigate(R.id.cameraFragment));
+    }
+
+    private void connect() {
+        String host = hostEdit.getText().toString().trim();
+        String user = userEdit.getText().toString();
+        String pass = passEdit.getText().toString();
+
+        append("Connecting …");
+        new Thread(() -> {
+            try {
+                client = MqttClient.builder()
+                        .useMqttVersion5()
+                        .serverHost(host)
+                        .serverPort(8884)
+                        .sslWithDefaultConfig()
+                        .webSocketConfig()
+                        .serverPath("mqtt")
+                        .applyWebSocketConfig()
+                        .buildBlocking();
+
+                client.connectWith()
+                        .simpleAuth()
+                        .username(user)
+                        .password(UTF_8.encode(pass))
+                        .applySimpleAuth()
+                        .send();
+
+                client.subscribeWith().topicFilter(MqttSession.commandTopic())
+                        .qos(MqttQos.AT_LEAST_ONCE).send();
+
+                requireActivity().runOnUiThread(() -> {
+                    append("✓ Connected");
+                    navCamBtn.setEnabled(true);
+                });
+
+                client.toAsync().publishes(ALL, p -> {
+
+                    if (!p.getPayload().isPresent()) return;
+
+                    String payload = UTF_8.decode(p.getPayload().get()).toString();
+                    String t = p.getTopic().toString();
+
+                    if (MqttSession.commandTopic().equals(t)) {
+                        try {
+                            JSONObject obj = new JSONObject(payload);
+                            String cmd = obj.optString("command", "").trim();
+                            handleCommand(cmd);
+                        } catch (Exception ignore) {
+                        }
+                    }
+
+                    append("<< " + t + " : " +
+                            (payload.length() > 120 ? payload.substring(0, 120) + "…" : payload));
+                });
+
+                MqttSession.setClient(client);
+
+            } catch (Exception e) {
+                requireActivity().runOnUiThread(() -> append("Err: " + e.getMessage()));
+            }
+        }).start();
+    }
+
+    private void handleCommand(String cmd) {
+        switch (cmd.toLowerCase()) {
+            case CMD_START_LIVE:
+                MqttSession.setLive(true);
+                break;
+            case CMD_STOP_LIVE:
+                MqttSession.setLive(false);
+                break;
         }
     }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_mqtt, container, false);
+    public void append(String txt) {
+        if (logView.getText().length() > 10_000)
+            logView.setText("");
+        logView.append(txt + "\n");
+
     }
 }
