@@ -46,7 +46,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-
 public class CameraFragment extends Fragment
         implements MqttSession.LiveModeListener, MqttSession.CaptureListener {
 
@@ -56,6 +55,8 @@ public class CameraFragment extends Fragment
     private PreviewView preview;
     private Button backBtn;
     private View marker;
+    private TextView resTv;
+    private boolean highRes = true;
 
     private ImageCapture imgCap;
     private ScheduledExecutorService scheduler;
@@ -79,12 +80,18 @@ public class CameraFragment extends Fragment
         preview = v.findViewById(R.id.cameraPreview);
         backBtn = v.findViewById(R.id.backButton);
         marker = v.findViewById(R.id.liveMarker);
+        resTv = v.findViewById(R.id.resIndicator);
 
         backBtn.setOnClickListener(x ->
                 NavHostFragment.findNavController(this).popBackStack());
 
         marker.setOnClickListener(x ->
                 MqttSession.setLive(!MqttSession.isLive()));
+
+        resTv.setOnClickListener(x -> {
+            highRes = !highRes;
+            resTv.setText(highRes ? "Res: high" : "Res: low");
+        });
 
         updateMarker();
 
@@ -96,6 +103,7 @@ public class CameraFragment extends Fragment
         }
     }
 
+    /*──────── CameraX init ────────*/
     private void startCam() {
         ListenableFuture<ProcessCameraProvider> fut = ProcessCameraProvider.getInstance(requireContext());
         fut.addListener(() -> {
@@ -129,13 +137,13 @@ public class CameraFragment extends Fragment
     private void periodicShot() {
         boolean live = MqttSession.isLive();
         if (live) {
-            captureAndPublish(true);
+            captureAndPublish(false, true); // live → NU galerie, topic live
         } else {
-            captureAndPublish(false);
+            captureAndPublish(true, false); // normal → galerie + topic images
         }
     }
 
-    private void captureAndPublish(boolean forceLiveTopic) {
+    private void captureAndPublish(boolean saveGallery, boolean forceLiveTopic) {
         if (imgCap == null) return;
         try {
             File tmp = File.createTempFile("cap_", ".jpg", requireContext().getCacheDir());
@@ -144,7 +152,8 @@ public class CameraFragment extends Fragment
             imgCap.takePicture(opts, Executors.newSingleThreadExecutor(), new ImageCapture.OnImageSavedCallback() {
                 @Override
                 public void onImageSaved(@NonNull ImageCapture.OutputFileResults r) {
-                    Bitmap bmp = BitmapFactory.decodeFile(tmp.getAbsolutePath(), new BitmapFactory.Options());
+                    Bitmap bmp = decodeScaled(tmp);
+                    if (saveGallery) saveToGallery(bmp);
                     String topic = forceLiveTopic ? MqttSession.liveTopic() : MqttSession.normalTopic();
                     publishImage(bmp, topic);
                     tmp.delete();
@@ -156,6 +165,41 @@ public class CameraFragment extends Fragment
                 }
             });
         } catch (Exception ignore) {
+        }
+    }
+
+    private Bitmap decodeScaled(File f) {
+        BitmapFactory.Options o = new BitmapFactory.Options();
+        o.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(f.getAbsolutePath(), o);
+        int target = highRes ? 1024 : 480;
+        int sc = 1;
+        while (Math.max(o.outWidth, o.outHeight) / sc > target) sc *= 2;
+        o.inJustDecodeBounds = false;
+        o.inSampleSize = sc;
+        return BitmapFactory.decodeFile(f.getAbsolutePath(), o);
+    }
+
+    private void saveToGallery(Bitmap bmp) {
+        try {
+            String name = "IMG_" + System.currentTimeMillis() + ".jpg";
+            OutputStream os;
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues cv = new ContentValues();
+                cv.put(MediaStore.Images.Media.DISPLAY_NAME, name);
+                cv.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                cv.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/imaginiSS");
+                Uri uri = requireContext().getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+                os = requireContext().getContentResolver().openOutputStream(uri);
+            } else {
+                File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "imaginiSS");
+                if (!dir.exists()) dir.mkdirs();
+                os = new FileOutputStream(new File(dir, name));
+            }
+            bmp.compress(Bitmap.CompressFormat.JPEG, 80, os);
+            os.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -180,6 +224,17 @@ public class CameraFragment extends Fragment
                 .qos(MqttQos.AT_LEAST_ONCE)
                 .send();
     }
+
+    private void sendDisconnect(){
+        var cl = MqttSession.client(); if(cl==null) return;
+        String json = "{\"command\":\"disconnect\"}";
+        cl.toAsync().publishWith()
+                .topic(MqttSession.commandTopic())
+                .payload(StandardCharsets.UTF_8.encode(json))
+                .qos(MqttQos.AT_LEAST_ONCE)
+                .send();
+    }
+
     @Override
     public void onLiveModeChanged(boolean live) {
         requireActivity().runOnUiThread(() -> {
@@ -190,7 +245,7 @@ public class CameraFragment extends Fragment
 
     @Override
     public void onCaptureRequest() {
-        if (!MqttSession.isLive()) captureAndPublish(false);
+        if (!MqttSession.isLive()) captureAndPublish(false, false);
     }
 
     @Override
@@ -211,6 +266,7 @@ public class CameraFragment extends Fragment
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        sendDisconnect();
         if (scheduler != null) scheduler.shutdownNow();
     }
 

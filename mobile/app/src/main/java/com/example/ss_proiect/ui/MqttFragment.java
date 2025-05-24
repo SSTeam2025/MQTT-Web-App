@@ -27,8 +27,8 @@ import org.json.JSONObject;
 public class MqttFragment extends Fragment {
 
     private static final String CMD_START_LIVE = "start_live";
-    private static final String CMD_STOP_LIVE = "stop_live";
-    private static final String CMD_CAPTURE = "capture";
+    private static final String CMD_STOP_LIVE  = "stop_live";
+    private static final String CMD_CAPTURE    = "capture";
 
     // UI
     private EditText hostEdit, userEdit, passEdit;
@@ -91,6 +91,7 @@ public class MqttFragment extends Fragment {
 
                 requireActivity().runOnUiThread(() -> {
                     append("✓ Connected");
+                    append("Subscribed to " + MqttSession.commandTopic());
                     navCamBtn.setEnabled(true);
                 });
 
@@ -99,15 +100,14 @@ public class MqttFragment extends Fragment {
                     if (!p.getPayload().isPresent()) return;
 
                     String payload = UTF_8.decode(p.getPayload().get()).toString();
-                    String t = p.getTopic().toString();
+                    String t   = p.getTopic().toString();
 
                     if (MqttSession.commandTopic().equals(t)) {
                         try {
                             JSONObject obj = new JSONObject(payload);
                             String cmd = obj.optString("command", "").trim();
                             handleCommand(cmd);
-                        } catch (Exception ignore) {
-                        }
+                        } catch (Exception ignore) {}
                     }
 
                     append("<< " + t + " : " +
@@ -137,9 +137,10 @@ public class MqttFragment extends Fragment {
     }
 
     public void append(String txt) {
-        if (logView.getText().length() > 10_000)
-            logView.setText("");
-        logView.append(txt + "\n");
-
+        requireActivity().runOnUiThread(() -> {
+            if (logView.getText().length() > 10_000)
+                logView.setText("");
+            logView.append(txt + "\n");
+        });
     }
 }
