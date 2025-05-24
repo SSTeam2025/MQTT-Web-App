@@ -130,6 +130,9 @@ public class MqttFragment extends Fragment {
             case CMD_STOP_LIVE:
                 MqttSession.setLive(false);
                 break;
+            case CMD_CAPTURE:
+                if (!MqttSession.isLive()) MqttSession.requestCapture();
+                break;
         }
     }
 
