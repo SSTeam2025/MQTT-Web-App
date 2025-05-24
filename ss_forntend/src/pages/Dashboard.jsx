@@ -21,24 +21,35 @@ const Dashboard = () => {
   const [realImages, setRealImages] = useState([]);
 
   useEffect(() => {
-    getAllDevices().then(devices => {
-      setDevices(devices);
-      console.log('Dashboard devices from /devices endpoint:', devices);
-    }).catch(err => {
-      setDevices([]);
-      console.error('Error fetching devices for dashboard:', err);
-    });
+    let intervalId;
+    const fetchDevices = () => {
+      getAllDevices().then(devices => {
+        setDevices(devices);
+        console.log('Dashboard devices from /devices endpoint:', devices);
+      }).catch(err => {
+        setDevices([]);
+        console.error('Error fetching devices for dashboard:', err);
+      });
+    };
+    fetchDevices();
+    intervalId = setInterval(fetchDevices, 5000); // Poll every 5 seconds
     getAllImages().then(setRealImages);
+    return () => clearInterval(intervalId);
   }, []);
 
   // Compute today's date string (YYYY-MM-DD)
   const todayStr = new Date().toISOString().slice(0, 10);
+  console.log('Today:', todayStr);
+  console.log('Real images:', realImages);
 
   // Count images taken today from real images
-  const totalImagesToday = realImages.filter(img =>
+  var totalImagesToday = realImages.filter(img =>
     img.timestamp && img.timestamp.startsWith(todayStr)
   ).length;
-
+  var todaysImages = realImages.filter(img =>
+    img.timestamp && img.timestamp.startsWith(todayStr)
+  );
+  console.log('Total images today:', totalImagesToday);
   // Count online/offline devices from fetched devices
   const onlineCount = devices.filter(d => d.status === 'online').length;
   const offlineCount = devices.filter(d => d.status === 'offline').length;
@@ -53,6 +64,9 @@ const Dashboard = () => {
   const handleSidebarClick = (path) => {
     console.log('Sidebar clicked, navigating to:', path);
   };
+
+  // Get the first image in the gallery
+  const firstImageUrl = realImages.length > 0 ? realImages[0].url : undefined;
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -95,9 +109,9 @@ const Dashboard = () => {
             </Grid>
             <Box sx={{ mt: 2 }} />
             <Box sx={{ pb: 6 }}>
-              <ActiveDevicesList title="Active Devices" />
+              <ActiveDevicesList title="Active Devices" devices={devices.filter(d => d.status === 'online')} firstImageUrl={firstImageUrl} />
             </Box>
-            <LatestImagesGrid title="Today's Images" images={realImages} />
+            <LatestImagesGrid title="Today's Images" images={todaysImages} />
             <Box sx={{ mt: 6 }}></Box>
             <Box sx={{ pb: 6 }}></Box>
           </>

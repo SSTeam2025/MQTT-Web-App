@@ -80,7 +80,7 @@ public class MyMqttListener {
                 // Deconectare dispozitiv -> offline
                 if (topic.startsWith("command/")) {
                     String payloadJson = StandardCharsets.UTF_8.decode(publish.getPayload().get()).toString();
-
+                    System.out.println("payloadJson: " + payloadJson);
                     JsonNode node = objectMapper.readTree(payloadJson);
                     if (node.has("command") && node.get("command").asText().equalsIgnoreCase("disconnect")) {
                         deviceRepository.findById(deviceId).ifPresent(device -> {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, CircularProgress, Card, CardMedia, CardContent, IconButton } from '@mui/material';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import ImageModal from './ImageModal';
 import { getLatestImages } from '../requests/dashboard';
 import { latestImages as mockedLatestImages } from '../mocked/dashboard';
 
@@ -14,6 +15,7 @@ const LatestImagesGrid = ({ title = 'Last Images Received', images: propImages }
   const [page, setPage] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     if (propImages) {
@@ -78,7 +80,7 @@ const LatestImagesGrid = ({ title = 'Last Images Received', images: propImages }
           <IconButton onClick={handlePrev} disabled={page === 0 || animating}>
             <ArrowBackIosNewIcon />
           </IconButton>
-          <Box sx={{ width: 4 * 190, overflow: 'hidden', position: 'relative' }}>
+          <Box sx={{ width: 4 * 260, overflow: 'hidden', position: 'relative' }}>
             <Box
               sx={{
                 display: 'flex',
@@ -88,18 +90,21 @@ const LatestImagesGrid = ({ title = 'Last Images Received', images: propImages }
               }}
             >
               {visibleImages.map(img => (
-                <Box key={img.id} sx={{ minWidth: 180, maxWidth: 180, flex: '0 0 auto' }}>
-                  <Card sx={{ width: 180, height: 180, display: 'flex', flexDirection: 'column' }}>
+                <Box key={img.id} sx={{ minWidth: 250, maxWidth: 250, flex: '0 0 auto' }}>
+                  <Card sx={{ width: 250, height: 250, display: 'flex', flexDirection: 'column', cursor: 'pointer', '&:hover': { boxShadow: 6 } }} onClick={() => setSelectedImage(img)}>
                     <CardMedia
                       component="img"
-                      height="120"
+                      height="180"
                       image={img.url}
                       alt={img.deviceName}
                       sx={{ objectFit: 'cover' }}
                     />
                     <CardContent sx={{ p: 1 }}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        {img.deviceName}
+                      </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {img.deviceName} <br /> {img.timestamp.slice(11, 19)}
+                        {img.timestamp && img.timestamp.slice(11, 19)}
                       </Typography>
                     </CardContent>
                   </Card>
@@ -112,6 +117,12 @@ const LatestImagesGrid = ({ title = 'Last Images Received', images: propImages }
           </IconButton>
         </Box>
       )}
+      <ImageModal
+        open={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        image={selectedImage}
+        onImageProcessed={() => {}}
+      />
     </Box>
   );
 };

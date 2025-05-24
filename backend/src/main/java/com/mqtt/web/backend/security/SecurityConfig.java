@@ -33,6 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/images/**").permitAll() // ← ✅ permite accesul public
                         .requestMatchers("/live/**").permitAll()
                         .requestMatchers("/capture/**").permitAll()
+                        .requestMatchers("/devices/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess

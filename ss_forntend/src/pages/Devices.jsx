@@ -1,67 +1,87 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, CircularProgress, Grid } from '@mui/material';
-import axios from 'axios';
+import { Box, Typography, CircularProgress, Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { getAllDevices } from '../requests/devices';
 import DeviceCard from '../components/DeviceCard';
-
-const mockedDevices = [
-  {
-    id: '1',
-    name: 'Temperature Sensor A',
-    status: 'online',
-    lastImageUrl: 'https://placehold.co/300x180?text=Device+A',
-    parameters: { temp: '22°C', battery: '80%' }
-  },
-  {
-    id: '2',
-    name: 'Camera B',
-    status: 'offline',
-    lastImageUrl: 'https://placehold.co/300x180?text=Camera+B',
-    parameters: { lastSeen: '2024-05-14 10:22', battery: 'N/A' }
-  },
-  {
-    id: '3',
-    name: 'Door Lock C',
-    status: 'online',
-    lastImageUrl: 'https://placehold.co/300x180?text=Lock+C',
-    parameters: { locked: 'yes', battery: '60%' }
-  }
-];
+import { getAllImages } from '../requests/gallery';
 
 const Devices = () => {
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [galleryImages, setGalleryImages] = useState([]);
 
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        const response = await axios.get('http://localhost:8081/api/devices');
-        setDevices(response.data);
+        const devicesFromApi = await getAllDevices();
+        // Map to a consistent format if needed (like Gallery)
+        const devicesList = devicesFromApi.map(d => ({
+          id: d.deviceId || d.id,
+          name: d.name || d.deviceId,
+          status: d.status,
+          parameters: d.parameters || {},
+        }));
+        setDevices(devicesList);
+        setError('');
       } catch (err) {
-        setDevices(mockedDevices);
-        setError(''); // Clear error, show mocked data instead
+        setDevices([]);
+        setError('Failed to fetch devices.');
       } finally {
         setLoading(false);
       }
     };
     fetchDevices();
+    // Fetch gallery images
+    getAllImages().then(setGalleryImages);
   }, []);
 
   if (loading) return <CircularProgress />;
+
+  // Filter devices based on dropdown
+  let filteredDevices = devices.filter(device => {
+    if (filter === 'all') return true;
+    return device.status === filter;
+  });
+
+  // When 'all' is selected, show online devices first
+  if (filter === 'all') {
+    filteredDevices = [
+      ...filteredDevices.filter(d => d.status === 'online'),
+      ...filteredDevices.filter(d => d.status === 'offline')
+    ];
+  }
+
+  // Get the first image in the gallery
+  const firstImageUrl = galleryImages.length > 0 ? galleryImages[0].url : undefined;
 
   return (
     <Box>
       <Typography variant="h5" gutterBottom color="text.secondary">
         Connected Devices
       </Typography>
+      <FormControl sx={{ minWidth: 200, mb: 3 }}>
+        <InputLabel id="device-status-filter-label">Show</InputLabel>
+        <Select
+          labelId="device-status-filter-label"
+          value={filter}
+          label="Show"
+          onChange={e => setFilter(e.target.value)}
+        >
+          <MenuItem value="all">All Devices</MenuItem>
+          <MenuItem value="online">Online Only</MenuItem>
+          <MenuItem value="offline">Offline Only</MenuItem>
+        </Select>
+      </FormControl>
       {error && <Typography color="error">{error}</Typography>}
-      <Grid container spacing={3}>
-        {devices.map(device => (
+      <Grid container spacing={3} sx={{ rowGap: 10 }}>
+        {filteredDevices.map(device => (
           <Grid item key={device.id} sx={{ width: 320, height: 320, display: 'flex' }}>
-            <DeviceCard device={device} />
+            <DeviceCard device={device} firstImageUrl={firstImageUrl} />
           </Grid>
         ))}
       </Grid>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 10, mt:10 }}/>
     </Box>
   );
 };

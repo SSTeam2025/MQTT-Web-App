@@ -11,16 +11,14 @@ import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -242,7 +240,7 @@ public class ImageController {
             ImageEntity entity = new ImageEntity();
             entity.setFilename(newFilename);
             entity.setFormat("image/" + extension.replace(".", ""));
-            entity.setDeviceId("processed");
+            entity.setDeviceId("Processed");
             entity.setUploadDate(LocalDateTime.now());
             imageRepository.save(entity);
 
@@ -283,7 +281,7 @@ public class ImageController {
         // Salvează metadatele pentru imaginea de muchii
         ImageEntity edgeEntity = new ImageEntity();
         edgeEntity.setFilename(edgeFilename);
-        edgeEntity.setDeviceId(originalDeviceId);
+        edgeEntity.setDeviceId("Processed");
         edgeEntity.setFormat("image/jpeg");
         edgeEntity.setUploadDate(LocalDateTime.now());
         imageRepository.save(edgeEntity);
@@ -299,5 +297,47 @@ public class ImageController {
         ));
     }
 
+    @GetMapping("/analyze/preview")
+    public ResponseEntity<byte[]> analyzePreview(@RequestParam String filename) throws IOException {
+        Path filePath = uploadDir.resolve(filename).normalize();
+        if (!Files.exists(filePath)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+
+        BufferedImage original = ImageIO.read(filePath.toFile());
+        if (original == null) {
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        BufferedImage edgeImage = Analysis.detectEdges(original);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(edgeImage, "jpg", baos);
+        byte[] imageBytes = baos.toByteArray();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_JPEG);
+        headers.setContentLength(imageBytes.length);
+        headers.setCacheControl(CacheControl.noCache().getHeaderValue());
+
+        return new ResponseEntity<>(imageBytes, headers, HttpStatus.OK);
+    }
+
+    @GetMapping("/analyze/histogram")
+    public ResponseEntity<Map<String, int[]>> getHistogram(@RequestParam String filename) throws IOException {
+        Path filePath = uploadDir.resolve(filename).normalize();
+        if (!Files.exists(filePath)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+
+        BufferedImage image = ImageIO.read(filePath.toFile());
+        if (image == null) {
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        Map<String, int[]> histogram = Analysis.computeHistogram(image);
+
+        return ResponseEntity.ok(histogram);
+    }
 
 }

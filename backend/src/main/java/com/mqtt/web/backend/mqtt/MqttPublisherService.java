@@ -33,7 +33,7 @@ public class MqttPublisherService {
 
     public void publishCommand(String deviceId, String action) {
         String topic = "command/" + deviceId;
-        String payload = "{\"command\": " + action + "}";
+        String payload = String.format("{\"command\": \"%s\"}",action);
 
         client.publishWith()
                 .topic(topic)
