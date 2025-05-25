@@ -13,6 +13,9 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v2
 
+      - name: Grant execute permission to Gradle
+        run: chmod +x ./mobile/gradlew
+
       - name: Run tests
         working-directory: mobile
         run: ./gradlew test
