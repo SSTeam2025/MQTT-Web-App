@@ -26,8 +26,9 @@ jobs:
         working-directory: mobile
         run: ./gradlew test
 
-      # - name: Upload test report
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: unit_test_report
-      #     path: app/build/reports/tests/testDebugUnitTest/
+      - name: Upload test report
+        uses: actions/upload-artifact@v2
+        working-directory: mobile
+        with:
+          name: unit_test_report
+          path: app/build/reports/tests/testDebugUnitTest/
