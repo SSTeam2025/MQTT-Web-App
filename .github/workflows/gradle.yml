@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "cicd" ]
+    branches: [ "cicd", "main"]
   pull_request:
-    branches: [ "cicd" ]
+    branches: [ "cicd", "main"]
 
 jobs:
   unit-test:
