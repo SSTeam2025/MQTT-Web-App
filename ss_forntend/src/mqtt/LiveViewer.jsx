@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import mqtt from 'mqtt';
 
-const LiveViewer = ({ topic = 'demo/topic', title = 'Mesaj MQTT:', style }) => {
+const LiveViewer = ({deviceId, topic = 'demo/topic', title = 'Mesaj MQTT:', style }) => {
   const [message, setMessage] = useState('');
   const [imageSrc, setImageSrc] = useState(null);
     console.log(topic);
@@ -14,14 +14,14 @@ const LiveViewer = ({ topic = 'demo/topic', title = 'Mesaj MQTT:', style }) => {
     client.on('connect', () => {
       console.log('✅ Frontend connected to HiveMQ');
       client.subscribe(topic);
-      client.subscribe('live');
+      client.subscribe(`live/${deviceId}`);
     });
 
     client.on('message', (recvTopic, payload) => {
         console.log(payload);
         console.log(recvTopic);
         console.log(topic);
-      if (recvTopic === 'live') {
+      if (recvTopic.startsWith('live')) {
         // try {
         //   const data = JSON.parse(payload.toString());
         //   setMessage(data.imageData);

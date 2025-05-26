@@ -38,8 +38,8 @@ public class MyMqttListener {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Path uploadDir = Paths.get("uploads/").toAbsolutePath().normalize();
 
-    private final String host = "5714d602b6104b6ca5baa7d2a68c8893.s1.eu.hivemq.cloud";
-    private final String username = "bianca18";
+    private final String host = "060d18919ee741d28b9bde954d955e56.s1.eu.hivemq.cloud";
+    private final String username = "catalin";
     private final String password = "Mqtt1234!";
 
     @PostConstruct
@@ -76,12 +76,19 @@ public class MyMqttListener {
             try {
                 String topic = publish.getTopic().toString();
                 String deviceId = topic.split("/")[1]; // "images/device123" → "device123"
-
+                if (topic.startsWith("images/")) {
+                    deviceRepository.findById(deviceId).ifPresent(device -> {
+                        device.setStatus("online");
+                        deviceRepository.save(device);
+                        System.out.println("Device marcat ca online: " + deviceId);
+                    });
+                }
                 // Deconectare dispozitiv -> offline
                 if (topic.startsWith("command/")) {
                     String payloadJson = StandardCharsets.UTF_8.decode(publish.getPayload().get()).toString();
                     System.out.println("payloadJson: " + payloadJson);
                     JsonNode node = objectMapper.readTree(payloadJson);
+
                     if (node.has("command") && node.get("command").asText().equalsIgnoreCase("disconnect")) {
                         deviceRepository.findById(deviceId).ifPresent(device -> {
                             device.setStatus("offline");
