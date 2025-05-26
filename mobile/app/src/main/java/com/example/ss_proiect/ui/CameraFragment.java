@@ -51,7 +51,7 @@ public class CameraFragment extends Fragment
         implements MqttSession.LiveModeListener, MqttSession.CaptureListener {
 
     private static final int NORMAL_INTERVAL_SEC = 20;
-    private static final int LIVE_INTERVAL_SEC = 5;
+    private static final int LIVE_INTERVAL_SEC = 1;
 
     private PreviewView preview;
     private View marker;
@@ -150,7 +150,7 @@ public class CameraFragment extends Fragment
     private void captureAndPublish(boolean saveGallery, boolean forceLiveTopic) {
         if (imgCap == null) return;
         try {
-            File tmp = File.createTempFile("cap_", ".jpg", requireContext().getCacheDir());
+            File tmp = File.createTempFile("cap_", ".jpeg", requireContext().getCacheDir());
             ImageCapture.OutputFileOptions opts = new ImageCapture.OutputFileOptions.Builder(tmp).build();
 
             imgCap.takePicture(opts, Executors.newSingleThreadExecutor(), new ImageCapture.OnImageSavedCallback() {
@@ -193,7 +193,7 @@ public class CameraFragment extends Fragment
 
     private void saveToGallery(Bitmap bmp) {
         try {
-            String name = "IMG_" + System.currentTimeMillis() + ".jpg";
+            String name = "IMG_" + System.currentTimeMillis() + ".jpeg";
             OutputStream os;
             if (Build.VERSION.SDK_INT >= 29) {
                 ContentValues cv = new ContentValues();
@@ -223,7 +223,7 @@ public class CameraFragment extends Fragment
         String b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
 
         String device = MqttSession.DEVICE_NAME;
-        String timestamp = new java.text.SimpleDateFormat("dd-MM-yy_HH:mm:ss")
+        String timestamp = new java.text.SimpleDateFormat("dd-MM-yy_HH-mm-ss")
                 .format(new java.util.Date());
         String filename = device + "_" + timestamp;
         String json = "{\"filename\":\"" + filename + "\"," +
