@@ -11,8 +11,8 @@ import java.nio.charset.StandardCharsets;
 public class MqttPublisherService {
 
     private final Mqtt5AsyncClient client;
-    private final String host = "5714d602b6104b6ca5baa7d2a68c8893.s1.eu.hivemq.cloud";
-    private final String username = "bianca18";
+    private final String host = "060d18919ee741d28b9bde954d955e56.s1.eu.hivemq.cloud";
+    private final String username = "catalin";
     private final String password = "Mqtt1234!";
 
     public MqttPublisherService() {

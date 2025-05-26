@@ -204,6 +204,7 @@ const DeviceCard = ({ device, firstImageUrl }) => {
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400, minWidth: 400, mb: 0 }}>
               {isLive ? (
                 <LiveViewer 
+                  deviceId={device.deviceId || device.id}
                   topic={`devices/${device.deviceId || device.id}`}
                   style={{ maxWidth: 400, maxHeight: 400, borderRadius: 8, display: 'block', margin: '0 auto' }}
                 />
