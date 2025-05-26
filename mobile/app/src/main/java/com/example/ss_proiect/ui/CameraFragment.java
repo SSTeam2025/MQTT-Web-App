@@ -51,7 +51,7 @@ public class CameraFragment extends Fragment
         implements MqttSession.LiveModeListener, MqttSession.CaptureListener {
 
     private static final int NORMAL_INTERVAL_SEC = 20;
-    private static final int LIVE_INTERVAL_SEC = 5;
+    private static final int LIVE_INTERVAL_SEC = 1;
 
     private PreviewView preview;
     private View marker;
@@ -122,7 +122,7 @@ public class CameraFragment extends Fragment
                         CameraSelector.DEFAULT_BACK_CAMERA, p, imgCap);
 
                 scheduler = Executors.newSingleThreadScheduledExecutor();
-                schedulePeriodic();   // start with NORMAL interval
+                schedulePeriodic();
 
             } catch (Exception e) {
                 Log.w("", e);
@@ -141,16 +141,16 @@ public class CameraFragment extends Fragment
     private void periodicShot() {
         boolean live = MqttSession.isLive();
         if (live) {
-            captureAndPublish(false, true); // live → NU galerie, topic live
+            captureAndPublish(false, true);
         } else {
-            captureAndPublish(true, false); // normal → galerie + topic images
+            captureAndPublish(true, false);
         }
     }
 
     private void captureAndPublish(boolean saveGallery, boolean forceLiveTopic) {
         if (imgCap == null) return;
         try {
-            File tmp = File.createTempFile("cap_", ".jpg", requireContext().getCacheDir());
+            File tmp = File.createTempFile("cap_", ".jpeg", requireContext().getCacheDir());
             ImageCapture.OutputFileOptions opts = new ImageCapture.OutputFileOptions.Builder(tmp).build();
 
             imgCap.takePicture(opts, Executors.newSingleThreadExecutor(), new ImageCapture.OnImageSavedCallback() {
@@ -223,7 +223,7 @@ public class CameraFragment extends Fragment
         String b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
 
         String device = MqttSession.DEVICE_NAME;
-        String timestamp = new java.text.SimpleDateFormat("dd-MM-yy_HH:mm:ss")
+        String timestamp = new java.text.SimpleDateFormat("dd-MM-yy_HH-mm-ss")
                 .format(new java.util.Date());
         String filename = device + "_" + timestamp;
         String json = "{\"filename\":\"" + filename + "\"," +
